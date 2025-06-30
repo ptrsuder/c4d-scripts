@@ -178,6 +178,12 @@ def splitObject(obj,tag,delete):
 def proceedObject(obj,progress,numAllTextures):
     if obj.CheckType(c4d.Opolygon)==False:
         return
+    
+    hasSkin = False
+    for i in obj.GetChildren():
+        if i.CheckType(c4d.Oskin):
+            hasSkin = True
+            break
 
     tags = obj.GetTags()
     newObjs=[]
@@ -208,9 +214,9 @@ def proceedObject(obj,progress,numAllTextures):
         i.SetAbsPos(c4d.Vector(0,0,0))
         i.SetAbsRot(c4d.Vector(0,0,0))
         i.SetAbsScale(c4d.Vector(1,1,1))
-        newSkin = c4d.BaseObject(c4d.Oskin)
-        newSkin.InsertUnder(i)
-        doc.AddUndo(c4d.UNDOTYPE_NEW, newSkin)
+        if hasSkin:
+            newSkin = c4d.BaseObject(c4d.Oskin)
+            newSkin.InsertUnder(i)
     return nullObj
 
 def main():
