@@ -1,5 +1,63 @@
 import c4d
 
+#Change these if you need
+mirrorAxisPos = c4d.ID_CA_CONSTRAINT_TAG_MIRROR_AXIS_YZ
+mirrorAxisRot = c4d.ID_CA_CONSTRAINT_TAG_MIRROR_AXIS_YZ
+
+#if True search side string in joint name as prefix, otherwise search as substring
+searchPrefix = False
+
+# Define side names
+left_prefixes = ["arm left", "leg left"]
+right_prefixes = ["arm right", "leg right"] 
+
+
+def main():
+    doc = c4d.documents.GetActiveDocument()
+    obj_list = get_selected_joints(doc)
+
+    doc.StartUndo()
+
+    for obj in obj_list:
+        for i in range(len(left_prefixes)):
+            left_prefix = left_prefixes[i]
+            right_prefix = right_prefixes[i]
+
+            if searchPrefix:
+                if obj.GetName().startswith(left_prefix):
+                    corresponding_name = obj.GetName().replace(left_prefix, right_prefix)
+
+                    for k in obj_list:
+                        if k[c4d.ID_BASELIST_NAME] == corresponding_name:
+                            corresponding_obj = k
+                            break
+
+                    if not corresponding_obj:
+                        print("NOT FOUND " + corresponding_name)
+                        continue
+
+                    add_mirror_constraint(corresponding_obj ,obj)
+            else:
+                #print(obj.GetName())
+                if obj.GetName().find(left_prefix) != -1:
+                    corresponding_name = obj.GetName().replace(left_prefix, right_prefix)
+                    #corresponding_name = corresponding_name.replace("[L", "[R")
+
+                    corresponding_obj = None
+                    for k in obj_list:
+                        if k[c4d.ID_BASELIST_NAME] == corresponding_name:
+                            corresponding_obj = k
+                            break
+
+                    if not corresponding_obj:
+                        print("NOT FOUND " + corresponding_name)
+                        continue
+
+                    add_mirror_constraint(corresponding_obj ,obj)
+
+    doc.EndUndo()
+    c4d.EventAdd()
+
 def get_selected_joints(doc):
     """Retrieve all selected joints in the current document."""
     selected_joints = []
@@ -26,57 +84,23 @@ def add_mirror_constraint(joint, target_joint):
         doc.AddUndo(c4d.UNDOTYPE_NEW, constraint_tag)
         constraint_tag.SetParameter(c4d.ID_CA_CONSTRAINT_TAG_MIRROR, True, c4d.DESCFLAGS_SET_USERINTERACTION)
 
-        constraint_tag[70009,1000] = True
-        constraint_tag[70009,1001] = True
+        constraint_tag[70009,1000] = True #position
+        constraint_tag[70009,1001] = True #rotation
 
-        constraint_tag[70009,1004] = c4d.ID_CA_CONSTRAINT_TAG_MIRROR_AXIS_YZ
-        constraint_tag[70009,1005] = c4d.ID_CA_CONSTRAINT_TAG_MIRROR_AXIS_YZ
+        constraint_tag[70009,1004] = mirrorAxisPos #plane
+        constraint_tag[70009,1005] = mirrorAxisRot #axis
 
         constraint_tag[70001] = target_joint
 
+        #transform constraint (scale)
         constraint_tag[c4d.ID_CA_CONSTRAINT_TAG_PSR] = True
         constraint_tag[c4d.ID_CA_CONSTRAINT_TAG_LOCAL_S] = True
-        constraint_tag[10005] = False
-        constraint_tag[10007] = False
-        constraint_tag[10006] = True
+        constraint_tag[10005] = False #P
+        constraint_tag[10007] = False #R
+        constraint_tag[10006] = True  #S
         constraint_tag[10001] = target_joint
 
     return
-
-def main():
-    doc = c4d.documents.GetActiveDocument()
-
-    # Define sides   
-
-    left_prefixes = ["arm left", "leg left"]
-    right_prefixes = ["arm right", "leg right"]
-
-    obj_list = get_selected_joints(doc)
-
-    doc.StartUndo()
-    for obj in obj_list:
-        #print(obj.GetName())
-        for i in range(len(left_prefixes)):
-            left_prefix = left_prefixes[i]
-            right_prefix = right_prefixes[i]
-
-            if obj.GetName().startswith(left_prefix):
-                #print(right_prefix)
-                # Generate corresponding name for right-side object
-                corresponding_name = obj.GetName().replace(left_prefix, right_prefix)
-                #print(corresponding_name)
-
-                # Find corresponding object
-                corresponding_obj = doc.SearchObject(corresponding_name)
-
-                if not corresponding_obj:
-                    continue
-
-                add_mirror_constraint(corresponding_obj ,obj)
-    
-    doc.EndUndo()
-    
-c4d.EventAdd()
 
 if __name__=='__main__':
   main()
